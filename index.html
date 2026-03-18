@@ -3,164 +3,209 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Rhinorigami World</title>
+    <title>Rhinorigami Sanctuary</title>
     <style>
         :root {
-            --white: #fdfdfd;
-            --gray: #4a4a4a;
-            --border: 1.5px solid #000;
+            --yellow: #ffff88; --blue: #a0d8ef; --pink: #fbcce7;
+            --gray: #4a4a4a; --border: 1.5px solid #000;
         }
+
         body {
             margin: 0; background: #cbd5e0; height: 100vh; overflow: hidden;
-            font-family: 'Courier New', Courier, monospace; perspective: 1200px;
             display: flex; flex-direction: column; align-items: center;
+            font-family: 'Courier New', monospace; perspective: 1500px;
+            transition: background 2.5s ease-in-out;
         }
 
-        /* The Main Writing Pad - Centered for better UI */
-        #pad-container {
-            position: relative; margin-top: 20vh;
+        /* Sleep State Background */
+        body.sleeping { background: #2d3748; }
+
+        #pad {
+            position: relative; margin-top: 15vh;
             width: 220px; height: 220px;
-            transform: rotateX(15deg); transform-style: preserve-3d; z-index: 100;
+            transform: rotateX(15deg); transform-style: preserve-3d; z-index: 10;
         }
-        .pad-sheet {
+        .sheet {
             position: absolute; width: 100%; height: 100%;
-            background: var(--white); border: var(--border);
-            box-shadow: 4px 4px 10px rgba(0,0,0,0.1);
+            border: var(--border); box-shadow: 4px 4px 12px rgba(0,0,0,0.2);
         }
-        #input-note {
+        #note-input {
             width: 100%; height: 100%; border: none; padding: 15px;
-            box-sizing: border-box; resize: none; outline: none;
-            background: transparent; font-weight: bold; font-size: 16px;
+            background: transparent; font-weight: bold; font-size: 16px; 
+            outline: none; resize: none; color: #000;
         }
 
-        /* The Rhino Entity */
-        .rhino {
-            position: absolute; width: 80px; height: 80px;
-            transform-style: preserve-3d; will-change: transform; pointer-events: none;
+        /* Creature Entities */
+        .creature {
+            position: absolute; width: 90px; height: 90px;
+            transform-style: preserve-3d; z-index: 100;
+            transition: left 4s ease-in-out, top 4s ease-in-out, opacity 1s;
         }
-        .rhino-body {
+        .creature-body {
             position: relative; width: 100%; height: 100%;
-            transform-style: preserve-3d; transform: rotateX(60deg) rotateZ(-45deg);
+            transform-style: preserve-3d; transform: rotateX(65deg) rotateZ(-45deg);
+            transition: transform 1.5s ease-in-out;
         }
         .flap {
             position: absolute; width: 100%; height: 100%;
-            transform-style: preserve-3d; transition: transform 1.2s cubic-bezier(0.4, 0, 0.2, 1);
+            transform-style: preserve-3d; transition: transform 1.5s cubic-bezier(0.4, 0, 0.2, 1);
         }
         .side {
             position: absolute; width: 100%; height: 100%;
             backface-visibility: hidden; border: var(--border);
-            background: var(--white); display: flex; align-items: center; 
-            justify-content: center; font-size: 7px; overflow: hidden;
+            display: flex; align-items: center; justify-content: center; 
+            font-size: 8px; text-align: center; padding: 5px; overflow: hidden;
         }
         .back { background: var(--gray); transform: rotateY(180deg); }
+
+        /* Animation Keyframes */
+        @keyframes waddle { 0%, 100% { transform: rotateX(65deg) rotateZ(-45deg) translateY(0); } 50% { transform: rotateX(75deg) rotateZ(-45deg) translateY(-8px); } }
+        @keyframes swim { 0%, 100% { transform: rotateX(30deg) rotateZ(-45deg) scale(1.1); } 50% { transform: rotateX(20deg) rotateZ(-45deg) scale(1); } }
+        @keyframes flap { 0%, 100% { transform: rotateX(80deg) rotateZ(-45deg) translateZ(0); } 50% { transform: rotateX(80deg) rotateZ(-45deg) translateZ(20px); } }
+
+        .walking .creature-body { animation: waddle 0.5s infinite linear; }
+        .swimming .creature-body { animation: swim 1.2s infinite ease-in-out; }
+        .flying .creature-body { animation: flap 0.3s infinite ease-in-out; }
+
+        /* Hibernation Logic: Flatten and Fade */
+        .sleeping .creature-body { animation: none !important; transform: rotateX(0deg) rotateZ(0deg) scale(0.85); opacity: 0.6; }
 
         /* Fold Shapes */
         .f-tl { clip-path: polygon(0 0, 50% 0, 0 50%); transform-origin: 25% 25%; }
         .f-tr { clip-path: polygon(100% 0, 50% 0, 100% 50%); transform-origin: 75% 25%; }
         .f-bl { clip-path: polygon(0 100%, 50% 100%, 0 50%); transform-origin: 25% 75%; }
         .f-br { clip-path: polygon(100% 100%, 50% 100%, 100% 50%); transform-origin: 75% 75%; }
-
-        @keyframes waddle {
-            0%, 100% { transform: rotateX(60deg) rotateZ(-45deg) translateY(0); }
-            50% { transform: rotateX(70deg) rotateZ(-45deg) translateY(-6px); }
-        }
-        .walking .rhino-body { animation: waddle 0.4s infinite linear; }
-
-        /* Controls */
-        .ui { position: fixed; bottom: 40px; z-index: 1001; }
-        button { 
-            padding: 16px 32px; cursor: pointer; border-radius: 50px; 
-            border: 2px solid #000; background: #fff; font-weight: bold; font-size: 18px;
-            box-shadow: 0 4px 0 #000;
-        }
-        button:active { transform: translateY(2px); box-shadow: 0 2px 0 #000; }
     </style>
 </head>
-<body>
+<body onmousedown="wakeUp()" ontouchstart="wakeUp()">
 
-    <div id="pad-container">
-        <div class="pad-sheet" style="transform: translateZ(-4px) rotate(1deg)"></div>
-        <div class="pad-sheet" style="transform: translateZ(-2px) rotate(-1deg)"></div>
-        <div class="pad-sheet">
-            <textarea id="input-note" placeholder="Write & release..."></textarea>
+    <div id="pad">
+        <div id="pad-top" class="sheet" style="background: var(--yellow);">
+            <textarea id="note-input" placeholder="Type your note here... 
+
+- Wait 2s to release
+- Wait 55s to sleep
+- Touch screen to wake"></textarea>
         </div>
     </div>
 
-    <div class="ui">
-        <button onclick="spawnRhino()">Release Rhino</button>
-    </div>
-
     <script>
-        const rhinos = [];
-        const speed = 1.5;
+        let creatures = [];
+        let sleepTimer;
+        let isSleeping = false;
+        const configs = [
+            { front: '#ffff88', anim: 'walking', speed: 1.1 }, // Rhino
+            { front: '#a0d8ef', anim: 'swimming', speed: 0.5 }, // Turtle
+            { front: '#fbcce7', anim: 'flying', speed: 2.0 }   // Crane
+        ];
 
-        function spawnRhino() {
-            const input = document.getElementById('input-note');
-            const text = input.value || "Ithaca";
+        const input = document.getElementById('note-input');
+
+        // --- SLEEP LOGIC ---
+        function resetSleepTimer() {
+            clearTimeout(sleepTimer);
+            if(isSleeping) wakeUp();
+            sleepTimer = setTimeout(goToSleep, 55000); // 55 seconds
+        }
+
+        function goToSleep() {
+            if (creatures.length === 0) return;
+            isSleeping = true;
+            document.body.classList.add('sleeping');
+            creatures.forEach(c => {
+                // Drift into a central "pile"
+                c.x = (window.innerWidth / 2) - 45 + (Math.random() * 80 - 40);
+                c.y = (window.innerHeight / 2) - 45 + (Math.random() * 80 - 40);
+                c.el.style.left = c.x + 'px';
+                c.el.style.top = c.y + 'px';
+            });
+        }
+
+        function wakeUp() {
+            if(!isSleeping) return;
+            isSleeping = false;
+            document.body.classList.remove('sleeping');
+            creatures.forEach(c => {
+                c.angle = Math.random() * Math.PI * 2;
+            });
+            resetSleepTimer();
+        }
+
+        // Monitoring
+        window.addEventListener('mousemove', resetSleepTimer);
+        window.addEventListener('touchstart', resetSleepTimer);
+        input.addEventListener('input', resetSleepTimer);
+        resetSleepTimer();
+
+        // --- AUTO-TEAR LOGIC ---
+        let typingTimeout;
+        input.addEventListener('keyup', () => {
+            clearTimeout(typingTimeout);
+            if (input.value.trim() !== "") {
+                typingTimeout = setTimeout(spawnCreature, 2000); // 2 second pause triggers tear
+            }
+        });
+
+        function spawnCreature() {
+            const text = input.value;
+            const config = configs[Math.floor(Math.random() * configs.length)];
             const el = document.createElement('div');
-            el.className = 'rhino';
+            el.className = 'creature';
+            const rect = document.getElementById('pad').getBoundingClientRect();
             
-            // Get center position for initial spawn
-            const rect = document.getElementById('pad-container').getBoundingClientRect();
-
-            const rhinoData = {
-                el: el,
-                x: rect.left + (rect.width / 2) - 40,
-                y: rect.top + (rect.height / 2) - 40,
+            const cData = {
+                el: el, x: rect.left + 65, y: rect.top + 65,
                 angle: Math.random() * Math.PI * 2,
-                size: 80,
-                folded: false
+                size: 90, folded: false, speed: config.speed, anim: config.anim
             };
 
             el.innerHTML = `
-                <div class="rhino-body">
-                    <div class="side">${text}</div>
-                    <div class="flap f-tl"><div class="side"></div><div class="side back"></div></div>
-                    <div class="flap f-tr"><div class="side"></div><div class="side back"></div></div>
-                    <div class="flap f-bl"><div class="side"></div><div class="side back"></div></div>
-                    <div class="flap f-br"><div class="side"></div><div class="side back"></div></div>
+                <div class="creature-body">
+                    <div class="side" style="background:${config.front}">${text}</div>
+                    <div class="flap f-tl"><div class="side" style="background:${config.front}"></div><div class="side back"></div></div>
+                    <div class="flap f-tr"><div class="side" style="background:${config.front}"></div><div class="side back"></div></div>
+                    <div class="flap f-bl"><div class="side" style="background:${config.front}"></div><div class="side back"></div></div>
+                    <div class="flap f-br"><div class="side" style="background:${config.front}"></div><div class="side back"></div></div>
                 </div>`;
 
             document.body.appendChild(el);
-            rhinos.push(rhinoData);
+            creatures.push(cData);
 
-            // Animate fold
+            // THE 5.5s FOLDING SEQUENCE
+            const f = el.querySelectorAll('.flap');
+            setTimeout(() => f[0].style.transform = `rotate3d(1, 1, 0, 160deg)`, 500);  // Crease 1
+            setTimeout(() => f[1].style.transform = `rotate3d(1, -1, 0, -160deg)`, 2000); // Crease 2
             setTimeout(() => {
-                el.querySelectorAll('.flap').forEach((f, i) => {
-                    const dir = (i % 2 === 0) ? 1 : -1;
-                    f.style.transform = `rotate3d(1, ${dir}, 0, 170deg)`;
-                });
-                el.classList.add('walking');
-                rhinoData.folded = true;
-            }, 50);
+                f[2].style.transform = `rotate3d(1, -1, 0, 160deg)`; // Crease 3
+                f[3].style.transform = `rotate3d(1, 1, 0, -160deg)`; // Crease 4
+            }, 3500);
+
+            // Release into habitat at 5.5s
+            setTimeout(() => {
+                el.classList.add(config.anim);
+                cData.folded = true;
+            }, 5500);
 
             input.value = '';
+            // Change color of top sheet for next note
+            const next = configs[Math.floor(Math.random() * 3)].front;
+            document.getElementById('pad-top').style.background = next;
         }
 
+        // --- CONTINUOUS MOVEMENT ---
         function update() {
-            rhinos.forEach(r => {
-                if (!r.folded) return;
-
-                r.x += Math.cos(r.angle) * speed;
-                r.y += Math.sin(r.angle) * speed;
-
-                // Screen boundary bounce
-                if (r.x < 0 || r.x > window.innerWidth - r.size) r.angle = Math.PI - r.angle;
-                if (r.y < 0 || r.y > window.innerHeight - r.size) r.angle = -r.angle;
-
-                // Collision Logic
-                rhinos.forEach(other => {
-                    if (r === other) return;
-                    const dx = r.x - other.x;
-                    const dy = r.y - other.y;
-                    const dist = Math.sqrt(dx*dx + dy*dy);
-                    if (dist < r.size * 0.7) {
-                        r.angle += 0.2; // Gentle steer away
-                    }
+            if (!isSleeping) {
+                creatures.forEach(c => {
+                    if (!c.folded) return;
+                    c.x += Math.cos(c.angle) * c.speed;
+                    c.y += Math.sin(c.angle) * c.speed;
+                    // Screen Bounce
+                    if (c.x < 0 || c.x > window.innerWidth - c.size) c.angle = Math.PI - c.angle;
+                    if (c.y < 0 || c.y > window.innerHeight - c.size) c.angle = -c.angle;
+                    c.el.style.left = c.x + 'px';
+                    c.el.style.top = c.y + 'px';
                 });
-
-                r.el.style.transform = `translate3d(${r.x}px, ${r.y}px, 0) rotateZ(${r.angle}rad)`;
-            });
+            }
             requestAnimationFrame(update);
         }
         update();
