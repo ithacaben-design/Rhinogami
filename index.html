@@ -1,0 +1,113 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Origami Rhino Post-it</title>
+    <style>
+        :root {
+            --paper-white: #fdfdfd;
+            --paper-gray: #4a4a4a;
+            --border-color: #000000;
+            --fold-speed: 1.5s;
+        }
+
+        body {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            height: 100vh;
+            background-color: #e0e0e0;
+            font-family: sans-serif;
+        }
+
+        /* The viewport for 3D */
+        .scene {
+            width: 300px;
+            height: 300px;
+            perspective: 1000px;
+        }
+
+        /* The Post-it Note */
+        .post-it {
+            width: 100%;
+            height: 100%;
+            position: relative;
+            transform-style: preserve-3d;
+            transition: transform var(--fold-speed) ease-in-out;
+            cursor: pointer;
+        }
+
+        /* Front (White) and Back (Dark Gray) */
+        .face {
+            position: absolute;
+            width: 100%;
+            height: 100%;
+            border: 2px solid var(--border-color);
+            box-sizing: border-box;
+            backface-visibility: hidden;
+            display: flex;
+            padding: 20px;
+            font-size: 1.2rem;
+        }
+
+        .front {
+            background-color: var(--paper-white);
+            color: #333;
+        }
+
+        .back {
+            background-color: var(--paper-gray);
+            transform: rotateY(180deg);
+            color: white;
+        }
+
+        /* Logic for the "Rhino Fold" (Simplified for Demo) */
+        .post-it.folded {
+            transform: rotateX(45deg) rotateY(-45deg) scale(0.5);
+        }
+
+        .controls {
+            margin-top: 50px;
+        }
+
+        button {
+            padding: 10px 20px;
+            font-size: 16px;
+            cursor: pointer;
+            background: #333;
+            color: white;
+            border: none;
+            border-radius: 5px;
+        }
+    </style>
+</head>
+<body>
+
+    <div class="scene">
+        <div class="post-it" id="rhinoNote">
+            <div class="face front">
+                <textarea placeholder="Write a note..." style="width:100%; border:none; background:transparent; resize:none;"></textarea>
+            </div>
+            <div class="face back">
+                <span>Rhino Core</span>
+            </div>
+        </div>
+    </div>
+
+    <div class="controls">
+        <button onclick="toggleFold()">Fold into Rhino</button>
+    </div>
+
+    <script>
+        function toggleFold() {
+            const note = document.getElementById('rhinoNote');
+            note.classList.toggle('folded');
+            
+            const btn = document.querySelector('button');
+            btn.innerHTML = note.classList.contains('folded') ? "Unfold Note" : "Fold into Rhino";
+        }
+    </script>
+</body>
+</html>
